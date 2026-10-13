@@ -79,6 +79,11 @@ export class RoadConditionsCard extends LitElement {
         this.config = { ...config };
     }
 
+    /** In a sections view the card takes a whole section by default and is never narrower than half of one. */
+    public getGridOptions(): Record<string, unknown> {
+        return { columns: 12, rows: "auto", min_columns: 6 };
+    }
+
     public getCardSize(): number {
         const count = this.config ? stationsOf(this.config.stations).length : 1;
         return count === 1 ? 4 : 1 + count;
@@ -314,6 +319,7 @@ export class RoadConditionsCard extends LitElement {
         return css`
             ha-card {
                 padding: 16px;
+                container-type: inline-size;
                 font-variant-numeric: tabular-nums;
                 --road-very-slippery: var(--road-conditions-very-slippery-color, var(--error-color, #db4437));
                 --road-slippery: var(--road-conditions-slippery-color, #f4511e);
@@ -450,6 +456,21 @@ export class RoadConditionsCard extends LitElement {
                 gap: 12px 8px;
             }
 
+            /* Two columns on a narrow card (half a section), every value on one row on a wide one (two sections). */
+            @container (max-width: 299px) {
+                .values {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+
+            @container (min-width: 800px) {
+                .values {
+                    grid-template-columns: none;
+                    grid-auto-flow: column;
+                    grid-auto-columns: minmax(0, 1fr);
+                }
+            }
+
             .values.divided {
                 margin-top: 14px;
                 padding-top: 12px;
@@ -480,21 +501,16 @@ export class RoadConditionsCard extends LitElement {
                 fill: currentColor;
             }
 
+            /* A value too long for its column wraps rather than being cut. */
             .value span {
                 min-width: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
+                overflow-wrap: anywhere;
             }
 
-            /* Freezing or heavy precipitation matters at a glance, so it is never cut short. */
+            /* Freezing or heavy precipitation matters at a glance. */
             .notable,
             .notable .icon {
                 color: var(--warning-color, #ffa600);
-            }
-
-            .value.notable span {
-                white-space: normal;
             }
 
             .warning {
