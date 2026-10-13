@@ -1,0 +1,7 @@
+{
+    "name": "Road conditions card",
+    "render_readme": true,
+    "filename": "road-conditions-card.js",
+    "country": "FI",
+    "homeassistant": "2026.9.3"
+}
