@@ -6,14 +6,10 @@ road and air temperature, the road surface, wind, precipitation and visibility.
 [![GitHub Release][releases-shield]][releases] [![GitHub Release Date][release-date-shield]][releases] [![HACS][hacs-shield]][hacs] [![License][license-shield]](LICENSE)
 
 <p>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/one-station-dark.png">
-  <img src="docs/images/one-station-light.png" width="400" alt="One road weather station in good winter conditions, four of six parts of the meter lit in amber, with its temperatures, snow on the road, wind with gusts, snowfall, visibility and a road weather warning">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/stations-dark.png">
-  <img src="docs/images/stations-light.png" width="400" alt="Three road weather stations as rows, each with its grip condition and a small meter, one of them very slippery with freezing rain">
-</picture>
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/one-station-light.png#gh-light-mode-only" width="400" alt="One road weather station in good winter conditions, four of six parts of the meter lit in amber, with its temperatures, snow on the road, wind with gusts, snowfall, visibility and a road weather warning">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/one-station-dark.png#gh-dark-mode-only" width="400" alt="One road weather station in good winter conditions, four of six parts of the meter lit in amber, with its temperatures, snow on the road, wind with gusts, snowfall, visibility and a road weather warning">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/stations-light.png#gh-light-mode-only" width="400" alt="Three road weather stations as rows, each with its grip condition and a small meter, one of them very slippery with freezing rain">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/stations-dark.png#gh-dark-mode-only" width="400" alt="Three road weather stations as rows, each with its grip condition and a small meter, one of them very slippery with freezing rain">
 </p>
 
 ## What is it?
@@ -93,15 +89,11 @@ In a sections view the card takes a whole section by default and can be made as 
 follow the card's width. A narrow card has two to a row, a normal one three, and a card two sections wide has them
 all on one row. A value too long for its column wraps rather than being cut.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/narrow-dark.png">
-  <img src="docs/images/narrow-light.png" width="250" alt="A very slippery station on a card half a section wide, its values two to a row and freezing rain wrapped onto two lines">
-</picture>
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/narrow-light.png#gh-light-mode-only" width="250" alt="A very slippery station on a card half a section wide, its values two to a row and freezing rain wrapped onto two lines">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/narrow-dark.png#gh-dark-mode-only" width="250" alt="A very slippery station on a card half a section wide, its values two to a row and freezing rain wrapped onto two lines">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/wide-dark.png">
-  <img src="docs/images/wide-light.png" width="990" alt="A station with good grip on a card two sections wide, with the meter across the card and all six values on one row">
-</picture>
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/wide-light.png#gh-light-mode-only" width="990" alt="A station with good grip on a card two sections wide, with the meter across the card and all six values on one row">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/wide-dark.png#gh-dark-mode-only" width="990" alt="A station with good grip on a card two sections wide, with the meter across the card and all six values on one row">
 
 ## Colours
 
