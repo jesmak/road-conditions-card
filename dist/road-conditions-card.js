@@ -689,7 +689,7 @@ var en_default = {
     good: "Good grip"
   },
   precipitation: {
-    none: "Dry",
+    none: "No rain",
     very_light: "Light",
     drizzle: "Drizzle",
     rain: "Rain",
@@ -1354,6 +1354,7 @@ var RoadConditionsCard = class extends i4 {
             .value span {
                 min-width: 0;
                 overflow-wrap: anywhere;
+                line-height: 1.25;
             }
 
             /* Freezing or heavy precipitation matters at a glance. */
@@ -1368,6 +1369,7 @@ var RoadConditionsCard = class extends i4 {
                 gap: 6px;
                 margin-top: 12px;
                 font-size: 14px;
+                line-height: 1.25;
                 color: var(--warning-color, #ffa600);
             }
 

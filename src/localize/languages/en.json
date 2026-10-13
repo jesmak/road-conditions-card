@@ -20,7 +20,7 @@
         "good": "Good grip"
     },
     "precipitation": {
-        "none": "Dry",
+        "none": "No rain",
         "very_light": "Light",
         "drizzle": "Drizzle",
         "rain": "Rain",

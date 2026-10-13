@@ -505,6 +505,7 @@ export class RoadConditionsCard extends LitElement {
             .value span {
                 min-width: 0;
                 overflow-wrap: anywhere;
+                line-height: 1.25;
             }
 
             /* Freezing or heavy precipitation matters at a glance. */
@@ -519,6 +520,7 @@ export class RoadConditionsCard extends LitElement {
                 gap: 6px;
                 margin-top: 12px;
                 font-size: 14px;
+                line-height: 1.25;
                 color: var(--warning-color, #ffa600);
             }
 
