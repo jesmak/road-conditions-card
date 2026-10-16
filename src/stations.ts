@@ -9,6 +9,7 @@ import {
     PRECIPITATION_ICONS,
     PRECIPITATION_TYPE_ICONS,
     SENSORS,
+    WIND_UNITS,
 } from "./const";
 import type { SensorKey } from "./const";
 import type { HassEntity, HomeAssistant } from "./hass";
@@ -53,23 +54,27 @@ export function reading(hass: HomeAssistant, entityId: string | undefined): Hass
     return entity && entity.state !== "unknown" && entity.state !== "unavailable" ? entity : undefined;
 }
 
-/** Where the condition sits on the scale, from 0 for very slippery to 5 for good grip. */
-export function scalePosition(condition: string | undefined): number {
-    return (GRIP_SCALE as readonly string[]).indexOf(condition ?? "");
-}
-
 /**
  * The scale's parts. Those up to the station's condition are lit in that condition's colour, like a meter; the rest
  * stay faint in their own.
  */
 export function scale(condition: string | undefined): Array<{ condition: string; lit: boolean }> {
-    const position = scalePosition(condition);
+    // From 0 for very slippery to 5 for good grip, -1 for a condition the scale doesn't know.
+    const position = (GRIP_SCALE as readonly string[]).indexOf(condition ?? "");
     return GRIP_SCALE.map((part, index) => ({ condition: index <= position ? GRIP_SCALE[position] : part, lit: index <= position }));
 }
 
-/** Gusts are worth showing only when they stand out from the mean wind. */
-export function showGusts(speed: number, gusts: number | undefined): boolean {
-    return gusts !== undefined && gusts - speed >= GUST_MARGIN;
+/**
+ * Gusts are worth showing only when they stand out from the mean wind. A user may have switched either sensor to
+ * another unit, so both are compared in m/s; with a unit the card doesn't know, any gust above the mean is shown.
+ */
+export function showGusts(speed: HassEntity, gusts: HassEntity): boolean {
+    const speedFactor = WIND_UNITS[String(speed.attributes.unit_of_measurement)];
+    const gustsFactor = WIND_UNITS[String(gusts.attributes.unit_of_measurement)];
+    if (speedFactor === undefined || gustsFactor === undefined) {
+        return Number(gusts.state) > Number(speed.state);
+    }
+    return Number(gusts.state) * gustsFactor - Number(speed.state) * speedFactor >= GUST_MARGIN;
 }
 
 /**

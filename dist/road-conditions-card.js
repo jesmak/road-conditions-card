@@ -1,4 +1,4 @@
-/*! road-conditions-card 1.0.0 | MIT License | Includes Weather Icons by Erik Flowers, SIL OFL 1.1, see LICENSE-weather-icons */
+/*! road-conditions-card 1.0.1 | MIT License | Includes Weather Icons by Erik Flowers, SIL OFL 1.1, see LICENSE-weather-icons */
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -604,7 +604,7 @@ function r5(r6) {
 }
 
 // src/const.ts
-var CARD_VERSION = "1.0.0";
+var CARD_VERSION = "1.0.1";
 var PLATFORM = "digitraffic_live";
 var SENSORS = [
   "road_temperature",
@@ -622,6 +622,13 @@ var SENSORS = [
 ];
 var GRIP_SCALE = ["very_slippery", "slippery", "fair_winter", "good_winter", "fair", "good"];
 var GUST_MARGIN = 3;
+var WIND_UNITS = {
+  "m/s": 1,
+  "km/h": 1 / 3.6,
+  mph: 0.44704,
+  kn: 0.514444,
+  "ft/s": 0.3048
+};
 var ICONS = {
   road_temperature: "mdi:road-variant",
   air_temperature: "wi:thermometer",
@@ -672,7 +679,9 @@ var en_default = {
     name: "Road conditions",
     description: "Grip, temperatures, road surface, wind, rain and visibility from road weather stations",
     invalid_configuration: "Invalid configuration. Add at least one road weather station.",
-    no_station: "No sensors found for this station"
+    station_without_device: "Invalid configuration. Every station needs its device.",
+    no_station: "No sensors found for this station",
+    no_readings: "No readings from this station right now"
   },
   labels: {
     road_temperature: "Road temperature",
@@ -724,7 +733,9 @@ var fi_default = {
     name: "Keli",
     description: "Ties\xE4\xE4asemien pito, l\xE4mp\xF6tilat, tienpinta, tuuli, sade ja n\xE4kyvyys",
     invalid_configuration: "Virheellinen konfiguraatio. Lis\xE4\xE4 v\xE4hint\xE4\xE4n yksi ties\xE4\xE4asema.",
-    no_station: "Asemalta ei l\xF6ytynyt sensoreita"
+    station_without_device: "Virheellinen konfiguraatio. Jokaiselle asemalle tarvitaan laite (device).",
+    no_station: "Asemalta ei l\xF6ytynyt sensoreita",
+    no_readings: "Asemalta ei juuri nyt saada lukemia"
   },
   labels: {
     road_temperature: "Tien l\xE4mp\xF6tila",
@@ -820,15 +831,17 @@ function reading(hass, entityId) {
   const entity = entityId ? hass.states[entityId] : void 0;
   return entity && entity.state !== "unknown" && entity.state !== "unavailable" ? entity : void 0;
 }
-function scalePosition(condition) {
-  return GRIP_SCALE.indexOf(condition ?? "");
-}
 function scale(condition) {
-  const position = scalePosition(condition);
+  const position = GRIP_SCALE.indexOf(condition ?? "");
   return GRIP_SCALE.map((part, index) => ({ condition: index <= position ? GRIP_SCALE[position] : part, lit: index <= position }));
 }
 function showGusts(speed, gusts) {
-  return gusts !== void 0 && gusts - speed >= GUST_MARGIN;
+  const speedFactor = WIND_UNITS[String(speed.attributes.unit_of_measurement)];
+  const gustsFactor = WIND_UNITS[String(gusts.attributes.unit_of_measurement)];
+  if (speedFactor === void 0 || gustsFactor === void 0) {
+    return Number(gusts.state) > Number(speed.state);
+  }
+  return Number(gusts.state) * gustsFactor - Number(speed.state) * speedFactor >= GUST_MARGIN;
 }
 function precipitation(type, code) {
   const heavy = HEAVY.includes(code ?? "");
@@ -860,7 +873,8 @@ function schema(text) {
               // Only a road weather station has a temperature sensor of the integration; its feeds have none.
               selector: { device: { entity: { integration: PLATFORM, domain: "sensor", device_class: "temperature" } } }
             },
-            name: { label: text("editor.name"), selector: { text: {} } }
+            // A field inside the object selector takes its helper from here; ha-form's computeHelper doesn't reach it.
+            name: { label: text("editor.name"), description: text("editor.name_helper"), selector: { text: {} } }
           }
         }
       }
@@ -888,9 +902,21 @@ var RoadConditionsCardEditor = class extends i4 {
                 .data=${{ ...this.config, stations: stationsOf(this.config.stations) }}
                 .schema=${schema((key) => this.text(key))}
                 .computeLabel=${(entry) => this.text(`editor.${entry.name}`)}
-                .computeHelper=${(entry) => this.helper(entry.name)}
                 @value-changed=${this.valueChanged}
             ></ha-form>
+            <!-- Home Assistant's list of objects shows no helper text, so the stations' one is drawn here, under the list. -->
+            <p class="helper">${this.text("editor.stations_helper")}</p>
+        `;
+  }
+  static get styles() {
+    return i`
+            .helper {
+                margin: 8px 0 0;
+                padding: 0 16px;
+                font-size: 12px;
+                line-height: 1.4;
+                color: var(--secondary-text-color);
+            }
         `;
   }
   valueChanged(event) {
@@ -903,11 +929,6 @@ var RoadConditionsCardEditor = class extends i4 {
   }
   text(key) {
     return translate(this.language(), key);
-  }
-  helper(name) {
-    const key = `editor.${name}_helper`;
-    const helper = translate(this.language(), key);
-    return helper === key ? void 0 : helper;
   }
   language() {
     return this.hass?.locale?.language ?? this.hass?.language ?? browserLanguage();
@@ -968,6 +989,9 @@ var RoadConditionsCard = class extends i4 {
     if (!config || stationsOf(config.stations).length === 0) {
       throw new Error(translate(browserLanguage(), "common.invalid_configuration"));
     }
+    if (stationsOf(config.stations).length !== config.stations.length) {
+      throw new Error(translate(browserLanguage(), "common.station_without_device"));
+    }
     this.config = { ...config };
   }
   /** In a sections view the card takes a whole section by default and is never narrower than half of one. */
@@ -989,10 +1013,23 @@ var RoadConditionsCard = class extends i4 {
     if (previous.locale !== this.hass.locale || previous.language !== this.hass.language || previous.formatEntityState !== this.hass.formatEntityState) {
       return true;
     }
-    const ids = stationsOf(this.config.stations).flatMap(
-      (station) => Object.values(stationSensors(this.hass, station.device))
-    );
+    const ids = stationsOf(this.config.stations).flatMap((station) => Object.values(this.sensors(station.device)));
     return ids.some((id) => previous.states[id] !== this.hass?.states[id]);
+  }
+  /** A station's sensors, looked up again only when the entity registry changes, not on every state change. */
+  sensors(device) {
+    const hass = this.hass;
+    let cache = this.sensorCache;
+    if (!cache || cache.entities !== hass.entities) {
+      cache = { entities: hass.entities, byDevice: /* @__PURE__ */ new Map() };
+      this.sensorCache = cache;
+    }
+    let found = cache.byDevice.get(device);
+    if (!found) {
+      found = stationSensors(hass, device);
+      cache.byDevice.set(device, found);
+    }
+    return found;
   }
   render() {
     if (!this.hass || !this.config) {
@@ -1009,7 +1046,7 @@ var RoadConditionsCard = class extends i4 {
   /** The whole card for one station: the grade on its scale, the values in a grid and a warning when there is one. */
   station(station) {
     const hass = this.hass;
-    const sensors = stationSensors(hass, station.device);
+    const sensors = this.sensors(station.device);
     const name = stationName(hass, station);
     if (Object.keys(sensors).length === 0) {
       return b2`<div class="name">${name}</div>
@@ -1019,6 +1056,10 @@ var RoadConditionsCard = class extends i4 {
     const grip = reading(hass, sensors.grip);
     const warning = reading(hass, sensors.road_warning);
     const values = this.values(sensors);
+    if (!condition && values.length === 0 && !warning) {
+      return b2`<div class="name">${name}</div>
+                <div class="message">${this.text("common.no_readings")}</div>`;
+    }
     return b2`
             <div class="name">${name}</div>
             ${condition ? b2`
@@ -1055,18 +1096,24 @@ var RoadConditionsCard = class extends i4 {
   /** One station as a row: its name and main values on the left, the grade and a small scale on the right. */
   row(station) {
     const hass = this.hass;
-    const sensors = stationSensors(hass, station.device);
+    const sensors = this.sensors(station.device);
     const name = stationName(hass, station);
     const condition = reading(hass, sensors.grip_condition);
     const grip = reading(hass, sensors.grip);
     const summary = this.values(sensors).filter(
       (value) => value.notable || ["road_temperature", "road_surface", "wind"].includes(value.key)
     );
+    let message;
+    if (Object.keys(sensors).length === 0) {
+      message = this.text("common.no_station");
+    } else if (summary.length === 0 && !condition) {
+      message = this.text("common.no_readings");
+    }
     const content = b2`
             <span class="row-text">
                 <span class="row-name">${name}</span>
                 <span class="row-values">
-                    ${Object.keys(sensors).length === 0 ? this.text("common.no_station") : summary.map(
+                    ${message ? message : summary.map(
       (value) => b2`<span class="row-value ${value.notable ? "notable" : ""}" title="${value.label}"
                                           >${this.icon(value.icon)}${value.text}</span
                                       >`
@@ -1119,7 +1166,7 @@ var RoadConditionsCard = class extends i4 {
     const speed = reading(hass, sensors.wind_speed);
     if (speed) {
       const gusts = reading(hass, sensors.wind_gusts);
-      const extra = gusts && showGusts(Number(speed.state), Number(gusts.state)) ? ` (${this.format(gusts)})` : "";
+      const extra = gusts && showGusts(speed, gusts) ? ` (${this.format(gusts)})` : "";
       add("wind", speed, ICONS.wind, `${this.format(speed)}${extra}`);
     }
     const code = reading(hass, sensors.precipitation);
@@ -1128,8 +1175,12 @@ var RoadConditionsCard = class extends i4 {
       const shown = precipitation(type?.state, code?.state);
       const entity = type ?? code;
       const intensity = reading(hass, sensors.rain_intensity);
-      const amount = intensity && Number(intensity.state) > 0 ? `, ${this.format(intensity)}` : "";
-      const label = `${this.text("labels.precipitation")}: ${this.format(entity)}${amount}`;
+      const described = [
+        entity,
+        ...type && code && HEAVY.includes(code.state) ? [code] : [],
+        ...intensity && Number(intensity.state) > 0 ? [intensity] : []
+      ];
+      const label = `${this.text("labels.precipitation")}: ${described.map((part) => this.format(part)).join(", ")}`;
       values.push({
         key: "precipitation",
         notable: shown.notable,
@@ -1147,11 +1198,7 @@ var RoadConditionsCard = class extends i4 {
   }
   /** A state as Home Assistant shows it, in the user's language and with its unit. */
   format(entity) {
-    if (this.hass?.formatEntityState) {
-      return this.hass.formatEntityState(entity);
-    }
-    const unit = entity.attributes.unit_of_measurement;
-    return unit ? `${entity.state} ${unit}` : entity.state;
+    return this.hass.formatEntityState(entity);
   }
   moreInfo(entityId) {
     if (entityId) {
@@ -1239,8 +1286,10 @@ var RoadConditionsCard = class extends i4 {
                 font-weight: var(--ha-font-weight-medium, 500);
             }
 
+            /* "0,22 µ" stays whole on its line. */
             .grip {
                 color: var(--primary-text-color);
+                white-space: nowrap;
             }
 
             .grade .grip {
@@ -1404,6 +1453,7 @@ var RoadConditionsCard = class extends i4 {
 
             .row-name {
                 font-size: 15px;
+                overflow-wrap: anywhere;
             }
 
             .row-values {
@@ -1418,6 +1468,8 @@ var RoadConditionsCard = class extends i4 {
                 display: inline-flex;
                 align-items: center;
                 gap: 4px;
+                min-width: 0;
+                overflow-wrap: anywhere;
             }
 
             .row-value .icon {
@@ -1445,6 +1497,20 @@ var RoadConditionsCard = class extends i4 {
             .row-grade .grip {
                 font-size: 12px;
                 color: var(--secondary-text-color);
+            }
+
+            /* Beside a long grade a narrow card leaves the name and values no room, so the grade goes below them. */
+            @container (max-width: 339px) {
+                .row {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 6px;
+                }
+
+                .row-grade {
+                    align-items: flex-start;
+                    text-align: left;
+                }
             }
         `;
   }

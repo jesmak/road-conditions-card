@@ -547,6 +547,27 @@
             }
         },
         {
+            "name": "narrow-stations",
+            "width": 240,
+            "card": {
+                "type": "custom:road-conditions-card",
+                "stations": [
+                    {
+                        "device": "lakeview",
+                        "name": "Road 12 Lakeview"
+                    },
+                    {
+                        "device": "hillside",
+                        "name": "Road 9 Hillside"
+                    },
+                    {
+                        "device": "riverbend",
+                        "name": "Road 3 Riverbend"
+                    }
+                ]
+            }
+        },
+        {
             "name": "wide",
             "width": 980,
             "card": {

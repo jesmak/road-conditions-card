@@ -35,13 +35,19 @@ describe("road-conditions-card", () => {
         // One station written without the list is refused with the card's own message, not a TypeError.
         const single = { type: "custom:road-conditions-card", stations: "station-a" } as unknown as RoadConditionsCardConfig;
         expect(() => element.setConfig(single)).toThrow("Invalid configuration");
+        // A station with a misspelt key is pointed out, not dropped while the others are shown.
+        const misspelt = {
+            type: "custom:road-conditions-card",
+            stations: ["station-a", { devcie: "station-b" }],
+        } as unknown as RoadConditionsCardConfig;
+        expect(() => element.setConfig(misspelt)).toThrow("Every station needs its device");
     });
 
     it("shows one station with its grade on the scale and its values as icons", async () => {
         const root = (await card(hass({ "station-a": DRY }), {})).shadowRoot as ShadowRoot;
         expect(text(root.querySelector(".name"))).toBe("Road 1 Example, station-a");
         expect(text(root.querySelector(".grade-text"))).toBe("good");
-        expect(text(root.querySelector(".grade .grip"))).toBe("0.82 µ");
+        expect(text(root.querySelector(".grade .grip"))).toBe("0,82 µ");
         expect([...root.querySelectorAll(".scale.large .part.lit")]).toHaveLength(6);
         expect(icons(root, ".value")).toEqual([
             "mdi:road-variant",
@@ -55,8 +61,8 @@ describe("road-conditions-card", () => {
         expect(root.querySelector(".value.wind svg path")?.getAttribute("d")).toMatch(/^M/);
         expect(root.querySelector(".value.road_surface ha-icon")).not.toBeNull();
         // Gusts of 7.3 stand out from a mean of 3.1, so they are shown.
-        expect(text(root.querySelector(".value.wind"))).toBe("3.1 m/s (7.3 m/s)");
-        expect(root.querySelector(".value.wind")?.getAttribute("aria-label")).toBe("Tuuli 3.1 m/s (7.3 m/s)");
+        expect(text(root.querySelector(".value.wind"))).toBe("3,1 m/s (7,3 m/s)");
+        expect(root.querySelector(".value.wind")?.getAttribute("aria-label")).toBe("Tuuli 3,1 m/s (7,3 m/s)");
         // A short word beside the icon, the full state in the tooltip.
         expect(text(root.querySelector(".value.precipitation"))).toBe("Pouta");
         expect(root.querySelector(".value.precipitation")?.getAttribute("title")).toBe("Sade: none");
@@ -76,9 +82,9 @@ describe("road-conditions-card", () => {
         ]);
         expect(icons(root, ".value.precipitation")).toEqual(["wi:snow"]);
         expect(text(root.querySelector(".value.precipitation"))).toBe("Lumi");
-        expect(root.querySelector(".value.precipitation")?.getAttribute("title")).toBe("Sade: snow, 0.4 mm/h");
+        expect(root.querySelector(".value.precipitation")?.getAttribute("title")).toBe("Sade: snow, 0,4 mm/h");
         // Gusts of 6.0 are within 3 m/s of the mean.
-        expect(text(root.querySelector(".value.wind"))).toBe("5.2 m/s");
+        expect(text(root.querySelector(".value.wind"))).toBe("5,2 m/s");
         expect(text(root.querySelector(".warning"))).toBe("Tiesäävaroitus: beware");
     });
 
@@ -116,6 +122,26 @@ describe("road-conditions-card", () => {
         expect(root.querySelector(".value.visibility")).toBeNull();
     });
 
+    it("names heavy precipitation by its amount in the tooltip too", async () => {
+        const root = (await card(hass({ "station-a": { ...SNOW, precipitation: ["heavy_snow"] } }), {})).shadowRoot as ShadowRoot;
+        expect(text(root.querySelector(".value.precipitation"))).toBe("Runsas lumisade");
+        expect(root.querySelector(".value.precipitation")?.getAttribute("title")).toBe("Sade: snow, heavy_snow, 0,4 mm/h");
+    });
+
+    it("says so when none of a station's sensors has a reading", async () => {
+        const state = hass({ "station-a": DRY, "station-c": SNOW });
+        for (const [id, entity] of Object.entries(state.states)) {
+            if (entity && id.includes("station_a")) {
+                state.states[id] = { ...entity, state: "unavailable" };
+            }
+        }
+        const root = (await card(state, {})).shadowRoot as ShadowRoot;
+        expect(text(root.querySelector(".name"))).toBe("Road 1 Example, station-a");
+        expect(text(root.querySelector(".message"))).toBe("Asemalta ei juuri nyt saada lukemia");
+        const rows = (await card(state, { stations: ["station-a", "station-c"] })).shadowRoot as ShadowRoot;
+        expect(text(rows.querySelector(".row .row-values"))).toBe("Asemalta ei juuri nyt saada lukemia");
+    });
+
     it("says so when a station has no sensors", async () => {
         const root = (await card(hass({}), { stations: [{ device: "station-gone", name: "VT1" }] })).shadowRoot as ShadowRoot;
         expect(text(root.querySelector(".name"))).toBe("VT1");
@@ -136,8 +162,8 @@ describe("road-conditions-card", () => {
             "Road 1 Example, station-c",
             "Road 1 Example, station-b",
         ]);
-        expect(text(rows[0].querySelector(".row-grade"))).toBe("good 0.82 µ");
-        expect(rows[0].getAttribute("aria-label")).toBe("VT1, Tien lämpötila 5.3 °C, Tienpinta dry, Tuuli 3.1 m/s (7.3 m/s), good 0.82 µ");
+        expect(text(rows[0].querySelector(".row-grade"))).toBe("good 0,82 µ");
+        expect(rows[0].getAttribute("aria-label")).toBe("VT1, Tien lämpötila 5,3 °C, Tienpinta dry, Tuuli 3,1 m/s (7,3 m/s), good 0,82 µ");
         expect(rows[1].querySelectorAll(".row-grade .part.lit")).toHaveLength(3);
         expect(rows[2].querySelector(".row-grade")).toBeNull();
         expect(icons(root, ".row:first-child .row-values")).toEqual(["mdi:road-variant", "mdi:layers-outline", "wi:strong-wind"]);
@@ -188,6 +214,13 @@ describe("road-conditions-card", () => {
         element.hass = { ...element.hass, locale: { language: "en" } };
         await element.updateComplete;
         expect(renders).toBe(2);
+        // A sensor removed from the registry is gone from the card, though its sensors were looked up before.
+        const entities = { ...element.hass.entities };
+        delete entities["sensor.tie_station_a_visibility_fi"];
+        element.hass = { ...element.hass, entities };
+        await element.updateComplete;
+        expect(renders).toBe(3);
+        expect(element.shadowRoot?.querySelector(".value.visibility")).toBeNull();
     });
 });
 

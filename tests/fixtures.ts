@@ -58,5 +58,12 @@ export function hass(stations: Record<string, Readings>): HomeAssistant {
             states[id] = { entity_id: id, state, last_changed: "2026-10-13", attributes: unit ? { unit_of_measurement: unit } : {} };
         }
     }
-    return { locale: { language: "fi" }, states, entities, devices };
+    return { locale: { language: "fi" }, states, entities, devices, formatEntityState };
+}
+
+/** Home Assistant's formatting as a Finnish user gets it, for numbers at least: a decimal comma and the unit. */
+function formatEntityState(entity: HassEntity): string {
+    const unit = entity.attributes.unit_of_measurement;
+    const state = /^-?\d/.test(entity.state) ? entity.state.replace(".", ",") : entity.state;
+    return unit ? `${state} ${unit}` : state;
 }

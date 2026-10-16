@@ -30,6 +30,15 @@ export const GRIP_SCALE = ["very_slippery", "slippery", "fair_winter", "good_win
 /** Gusts are shown beside the mean wind only when they exceed it by this much, in m/s. */
 export const GUST_MARGIN = 3;
 
+/** Wind speed units Home Assistant lets a user pick, as m/s per unit, so gusts are compared in m/s whatever is shown. */
+export const WIND_UNITS: Record<string, number> = {
+    "m/s": 1,
+    "km/h": 1 / 3.6,
+    mph: 0.44704,
+    kn: 0.514444,
+    "ft/s": 0.3048,
+};
+
 /** Weather is drawn with Weather Icons ("wi:"), the road with Material Design Icons, which has the road ones. */
 export const ICONS: Record<string, string> = {
     road_temperature: "mdi:road-variant",

@@ -67,7 +67,7 @@ Everything can be set in the card's visual editor, where the station picker offe
   have their own colour, from red for very slippery to green for good grip. The parts up to the station's class are
   lit in that class's colour, and the rest stay faint in their own.
 - **Road and air temperature, road surface and wind.** Gusts are shown in brackets after the mean wind when they
-  are at least 3 m/s stronger.
+  are at least 3 m/s stronger, whichever unit the wind sensors show.
 - **Precipitation** as a weather icon and a short word, such as snow, sleet or drizzle. The full description and the
   amount in mm/h are in its tooltip. Freezing drizzle, freezing rain and heavy precipitation are shown in the warning
   colour.
@@ -75,7 +75,8 @@ Everything can be set in the card's visual editor, where the station picker offe
 - **The road weather warning**, when the station gives one.
 
 A value the station doesn't measure is left out, so a station without a grip sensor shows no meter, and one without
-a present weather sensor shows only whether it rains or snows. Clicking a value opens its sensor.
+a present weather sensor shows only whether it rains or snows. When none of a station's sensors has a reading, such
+as when Digitraffic Live can't reach the station, the card says so. Clicking a value opens its sensor.
 
 In the rows of several stations, each row shows the road temperature, the road surface and the wind, the grade with
 its small meter, and freezing or heavy precipitation when there is some.
@@ -87,10 +88,13 @@ has the limits.
 
 In a sections view the card takes a whole section by default and can be made as narrow as half of one. Its values
 follow the card's width. A narrow card has two to a row, a normal one three, and a card two sections wide has them
-all on one row. A value too long for its column wraps rather than being cut.
+all on one row. A value too long for its column wraps rather than being cut. On a narrow card the rows of several
+stations put the grade below the values.
 
 <img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/narrow-light.png#gh-light-mode-only" width="250" alt="A very slippery station on a card half a section wide, its values two to a row and freezing rain wrapped onto two lines">
 <img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/narrow-dark.png#gh-dark-mode-only" width="250" alt="A very slippery station on a card half a section wide, its values two to a row and freezing rain wrapped onto two lines">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/narrow-stations-light.png#gh-light-mode-only" width="250" alt="Three stations on a card half a section wide, each with its grade and meter below its values">
+<img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/narrow-stations-dark.png#gh-dark-mode-only" width="250" alt="Three stations on a card half a section wide, each with its grade and meter below its values">
 
 <img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/wide-light.png#gh-light-mode-only" width="990" alt="A station with good grip on a card two sections wide, with the meter across the card and all six values on one row">
 <img src="https://raw.githubusercontent.com/jesmak/road-conditions-card/main/docs/images/wide-dark.png#gh-dark-mode-only" width="990" alt="A station with good grip on a card two sections wide, with the meter across the card and all six values on one row">

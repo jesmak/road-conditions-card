@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { precipitation, scale, showGusts, stationDevices, stationName, stationSensors, stationsOf } from "../src/stations";
+import type { HassEntity } from "../src/hass";
 import { DRY, SPARSE, hass } from "./fixtures";
 
 describe("stations", () => {
@@ -51,11 +52,23 @@ describe("stations", () => {
         expect(scale(undefined).some((part) => part.lit)).toBe(false);
     });
 
-    it("shows gusts only when they exceed the mean wind by 3 m/s", () => {
-        expect(showGusts(3.1, 7.3)).toBe(true);
-        expect(showGusts(3.0, 6.0)).toBe(true);
-        expect(showGusts(5.2, 6.0)).toBe(false);
-        expect(showGusts(5.2, undefined)).toBe(false);
+    it("shows gusts only when they exceed the mean wind by 3 m/s, in whatever unit the sensors are", () => {
+        const wind = (state: string, unit?: string): HassEntity => ({
+            entity_id: "sensor.wind",
+            state,
+            last_changed: "",
+            attributes: unit ? { unit_of_measurement: unit } : {},
+        });
+        expect(showGusts(wind("3.1", "m/s"), wind("7.3", "m/s"))).toBe(true);
+        expect(showGusts(wind("3.0", "m/s"), wind("6.0", "m/s"))).toBe(true);
+        expect(showGusts(wind("5.2", "m/s"), wind("6.0", "m/s"))).toBe(false);
+        // 5 and 6 m/s in km/h: 3.6 apart in numbers, but only 1 m/s in wind.
+        expect(showGusts(wind("18.0", "km/h"), wind("21.6", "km/h"))).toBe(false);
+        expect(showGusts(wind("18.0", "km/h"), wind("10.0", "m/s"))).toBe(true);
+        expect(showGusts(wind("10", "kn"), wind("17", "kn"))).toBe(true);
+        // A unit the card doesn't know: any gust above the mean.
+        expect(showGusts(wind("3", "Beaufort"), wind("4", "Beaufort"))).toBe(true);
+        expect(showGusts(wind("3"), wind("3"))).toBe(false);
     });
 
     it("shows precipitation by its type when the station tells it, otherwise by its amount code", () => {

@@ -1,6 +1,6 @@
 {
     "name": "road-conditions-card",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Home Assistant dashboard card for road weather stations: grip as a grade on a scale, temperatures, road surface, wind, rain and visibility",
     "keywords": [
         "home-assistant",

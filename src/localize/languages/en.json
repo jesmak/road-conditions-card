@@ -3,7 +3,9 @@
         "name": "Road conditions",
         "description": "Grip, temperatures, road surface, wind, rain and visibility from road weather stations",
         "invalid_configuration": "Invalid configuration. Add at least one road weather station.",
-        "no_station": "No sensors found for this station"
+        "station_without_device": "Invalid configuration. Every station needs its device.",
+        "no_station": "No sensors found for this station",
+        "no_readings": "No readings from this station right now"
     },
     "labels": {
         "road_temperature": "Road temperature",

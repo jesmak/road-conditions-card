@@ -10,7 +10,7 @@ import { LitElement, css, html, nothing, svg } from "lit";
 import type { CSSResultGroup, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { CARD_VERSION, ICONS } from "./const";
+import { CARD_VERSION, HEAVY, ICONS } from "./const";
 import type { SensorKey } from "./const";
 import "./editor";
 import type { HassEntity, HomeAssistant } from "./hass";
@@ -62,6 +62,7 @@ interface Value {
 export class RoadConditionsCard extends LitElement {
     @property({ attribute: false }) public hass?: HomeAssistant;
     @state() private config?: RoadConditionsCardConfig;
+    private sensorCache?: { entities: HomeAssistant["entities"]; byDevice: Map<string, Sensors> };
 
     public static getConfigElement(): HTMLElement {
         return document.createElement("road-conditions-card-editor");
@@ -75,6 +76,10 @@ export class RoadConditionsCard extends LitElement {
     public setConfig(config: RoadConditionsCardConfig): void {
         if (!config || stationsOf(config.stations).length === 0) {
             throw new Error(translate(browserLanguage(), "common.invalid_configuration"));
+        }
+        // A station whose device is misspelt would otherwise vanish from the card without a word.
+        if (stationsOf(config.stations).length !== config.stations.length) {
+            throw new Error(translate(browserLanguage(), "common.station_without_device"));
         }
         this.config = { ...config };
     }
@@ -106,10 +111,24 @@ export class RoadConditionsCard extends LitElement {
             return true;
         }
         // Home Assistant hands the card every state change in the house; only the stations' sensors matter.
-        const ids = stationsOf(this.config.stations).flatMap((station) =>
-            Object.values(stationSensors(this.hass as HomeAssistant, station.device)),
-        );
+        const ids = stationsOf(this.config.stations).flatMap((station) => Object.values(this.sensors(station.device)));
         return ids.some((id) => previous.states[id as string] !== this.hass?.states[id as string]);
+    }
+
+    /** A station's sensors, looked up again only when the entity registry changes, not on every state change. */
+    private sensors(device: string): Sensors {
+        const hass = this.hass as HomeAssistant;
+        let cache = this.sensorCache;
+        if (!cache || cache.entities !== hass.entities) {
+            cache = { entities: hass.entities, byDevice: new Map() };
+            this.sensorCache = cache;
+        }
+        let found = cache.byDevice.get(device);
+        if (!found) {
+            found = stationSensors(hass, device);
+            cache.byDevice.set(device, found);
+        }
+        return found;
     }
 
     protected render(): TemplateResult | typeof nothing {
@@ -128,7 +147,7 @@ export class RoadConditionsCard extends LitElement {
     /** The whole card for one station: the grade on its scale, the values in a grid and a warning when there is one. */
     private station(station: StationConfig): TemplateResult {
         const hass = this.hass as HomeAssistant;
-        const sensors = stationSensors(hass, station.device);
+        const sensors = this.sensors(station.device);
         const name = stationName(hass, station);
         if (Object.keys(sensors).length === 0) {
             return html`<div class="name">${name}</div>
@@ -138,6 +157,11 @@ export class RoadConditionsCard extends LitElement {
         const grip = reading(hass, sensors.grip);
         const warning = reading(hass, sensors.road_warning);
         const values = this.values(sensors);
+        // The integration keeps its sensors when it can't reach the station; they are all unavailable then.
+        if (!condition && values.length === 0 && !warning) {
+            return html`<div class="name">${name}</div>
+                <div class="message">${this.text("common.no_readings")}</div>`;
+        }
         return html`
             <div class="name">${name}</div>
             ${
@@ -187,20 +211,26 @@ export class RoadConditionsCard extends LitElement {
     /** One station as a row: its name and main values on the left, the grade and a small scale on the right. */
     private row(station: StationConfig): TemplateResult {
         const hass = this.hass as HomeAssistant;
-        const sensors = stationSensors(hass, station.device);
+        const sensors = this.sensors(station.device);
         const name = stationName(hass, station);
         const condition = reading(hass, sensors.grip_condition);
         const grip = reading(hass, sensors.grip);
         const summary = this.values(sensors).filter(
             (value) => value.notable || ["road_temperature", "road_surface", "wind"].includes(value.key),
         );
+        let message: string | undefined;
+        if (Object.keys(sensors).length === 0) {
+            message = this.text("common.no_station");
+        } else if (summary.length === 0 && !condition) {
+            message = this.text("common.no_readings");
+        }
         const content = html`
             <span class="row-text">
                 <span class="row-name">${name}</span>
                 <span class="row-values">
                     ${
-                        Object.keys(sensors).length === 0
-                            ? this.text("common.no_station")
+                        message
+                            ? message
                             : summary.map(
                                   (value) =>
                                       html`<span class="row-value ${value.notable ? "notable" : ""}" title="${value.label}"
@@ -264,7 +294,7 @@ export class RoadConditionsCard extends LitElement {
         const speed = reading(hass, sensors.wind_speed);
         if (speed) {
             const gusts = reading(hass, sensors.wind_gusts);
-            const extra = gusts && showGusts(Number(speed.state), Number(gusts.state)) ? ` (${this.format(gusts)})` : "";
+            const extra = gusts && showGusts(speed, gusts) ? ` (${this.format(gusts)})` : "";
             add("wind", speed, ICONS.wind, `${this.format(speed)}${extra}`);
         }
         const code = reading(hass, sensors.precipitation);
@@ -274,8 +304,13 @@ export class RoadConditionsCard extends LitElement {
             const shown = precipitation(type?.state, code?.state);
             const entity = (type ?? code) as HassEntity;
             const intensity = reading(hass, sensors.rain_intensity);
-            const amount = intensity && Number(intensity.state) > 0 ? `, ${this.format(intensity)}` : "";
-            const label = `${this.text("labels.precipitation")}: ${this.format(entity)}${amount}`;
+            // The type doesn't say how heavy it is, so the tooltip names heavy precipitation by its amount code too.
+            const described = [
+                entity,
+                ...(type && code && HEAVY.includes(code.state) ? [code] : []),
+                ...(intensity && Number(intensity.state) > 0 ? [intensity] : []),
+            ];
+            const label = `${this.text("labels.precipitation")}: ${described.map((part) => this.format(part)).join(", ")}`;
             values.push({
                 key: "precipitation",
                 notable: shown.notable,
@@ -294,11 +329,7 @@ export class RoadConditionsCard extends LitElement {
 
     /** A state as Home Assistant shows it, in the user's language and with its unit. */
     private format(entity: HassEntity): string {
-        if (this.hass?.formatEntityState) {
-            return this.hass.formatEntityState(entity);
-        }
-        const unit = entity.attributes.unit_of_measurement;
-        return unit ? `${entity.state} ${unit}` : entity.state;
+        return (this.hass as HomeAssistant).formatEntityState(entity);
     }
 
     private moreInfo(entityId: string | undefined): void {
@@ -390,8 +421,10 @@ export class RoadConditionsCard extends LitElement {
                 font-weight: var(--ha-font-weight-medium, 500);
             }
 
+            /* "0,22 µ" stays whole on its line. */
             .grip {
                 color: var(--primary-text-color);
+                white-space: nowrap;
             }
 
             .grade .grip {
@@ -555,6 +588,7 @@ export class RoadConditionsCard extends LitElement {
 
             .row-name {
                 font-size: 15px;
+                overflow-wrap: anywhere;
             }
 
             .row-values {
@@ -569,6 +603,8 @@ export class RoadConditionsCard extends LitElement {
                 display: inline-flex;
                 align-items: center;
                 gap: 4px;
+                min-width: 0;
+                overflow-wrap: anywhere;
             }
 
             .row-value .icon {
@@ -596,6 +632,20 @@ export class RoadConditionsCard extends LitElement {
             .row-grade .grip {
                 font-size: 12px;
                 color: var(--secondary-text-color);
+            }
+
+            /* Beside a long grade a narrow card leaves the name and values no room, so the grade goes below them. */
+            @container (max-width: 339px) {
+                .row {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 6px;
+                }
+
+                .row-grade {
+                    align-items: flex-start;
+                    text-align: left;
+                }
             }
         `;
     }

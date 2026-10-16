@@ -28,7 +28,7 @@ export interface HomeAssistant {
     language?: string;
     locale?: { language?: string };
     /** A state in the user's language and number format, with its unit: "Kuiva", "5,3 °C". */
-    formatEntityState?: (entity: HassEntity, state?: string) => string;
+    formatEntityState: (entity: HassEntity, state?: string) => string;
 }
 
 export interface LovelaceCardConfig {

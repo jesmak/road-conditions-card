@@ -1,6 +1,6 @@
 /** The card's visual editor: the title, and the stations with the names the card gives them. */
-import { LitElement, html, nothing } from "lit";
-import type { TemplateResult } from "lit";
+import { LitElement, css, html, nothing } from "lit";
+import type { CSSResultGroup, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
 import { PLATFORM } from "./const";
@@ -31,7 +31,8 @@ function schema(text: (key: string) => string) {
                             // Only a road weather station has a temperature sensor of the integration; its feeds have none.
                             selector: { device: { entity: { integration: PLATFORM, domain: "sensor", device_class: "temperature" } } },
                         },
-                        name: { label: text("editor.name"), selector: { text: {} } },
+                        // A field inside the object selector takes its helper from here; ha-form's computeHelper doesn't reach it.
+                        name: { label: text("editor.name"), description: text("editor.name_helper"), selector: { text: {} } },
                     },
                 },
             },
@@ -64,9 +65,22 @@ export class RoadConditionsCardEditor extends LitElement {
                 .data=${{ ...this.config, stations: stationsOf(this.config.stations) }}
                 .schema=${schema((key) => this.text(key))}
                 .computeLabel=${(entry: SchemaEntry) => this.text(`editor.${entry.name}`)}
-                .computeHelper=${(entry: SchemaEntry) => this.helper(entry.name)}
                 @value-changed=${this.valueChanged}
             ></ha-form>
+            <!-- Home Assistant's list of objects shows no helper text, so the stations' one is drawn here, under the list. -->
+            <p class="helper">${this.text("editor.stations_helper")}</p>
+        `;
+    }
+
+    static get styles(): CSSResultGroup {
+        return css`
+            .helper {
+                margin: 8px 0 0;
+                padding: 0 16px;
+                font-size: 12px;
+                line-height: 1.4;
+                color: var(--secondary-text-color);
+            }
         `;
     }
 
@@ -81,12 +95,6 @@ export class RoadConditionsCardEditor extends LitElement {
 
     private text(key: string): string {
         return translate(this.language(), key);
-    }
-
-    private helper(name: string): string | undefined {
-        const key = `editor.${name}_helper`;
-        const helper = translate(this.language(), key);
-        return helper === key ? undefined : helper;
     }
 
     private language(): string {

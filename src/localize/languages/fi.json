@@ -3,7 +3,9 @@
         "name": "Keli",
         "description": "Tiesääasemien pito, lämpötilat, tienpinta, tuuli, sade ja näkyvyys",
         "invalid_configuration": "Virheellinen konfiguraatio. Lisää vähintään yksi tiesääasema.",
-        "no_station": "Asemalta ei löytynyt sensoreita"
+        "station_without_device": "Virheellinen konfiguraatio. Jokaiselle asemalle tarvitaan laite (device).",
+        "no_station": "Asemalta ei löytynyt sensoreita",
+        "no_readings": "Asemalta ei juuri nyt saada lukemia"
     },
     "labels": {
         "road_temperature": "Tien lämpötila",
