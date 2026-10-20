@@ -1,6 +1,6 @@
 {
     "translations": {
-        "digitraffic_live": "../../hass-integraatiot/digitraffic_live/custom_components/digitraffic_live/translations"
+        "digitraffic_live": "../../hass-integrations/digitraffic_live/custom_components/digitraffic_live/translations"
     },
     "states": {
         "sensor.hillside_road_temperature": {
